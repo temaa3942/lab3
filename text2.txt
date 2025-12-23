@@ -1,0 +1,94 @@
+class TextCompareApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Сравнение текстовых файлов")
+        self.root.geometry("900x600")
+        self.root.minsize(700, 450)
+        self.root.resizable(True, True)
+
+        self.file1_path = None
+        self.file2_path = None
+
+        self._build_menu()
+        self._build_ui()
+
+    def choose_file1(self):
+        path = filedialog.askopenfilename(
+            title="Выберите текстовый файл 1",
+            filetypes=[("Text files", "*.txt *.csv *.log *.md"), ("All files", "*.*")]
+        )
+        if path:
+            self.file1_path = path
+            self.lbl1.config(text=f"Файл 1: {path}")
+            self.status.config(text="Выбран файл 1")
+
+    def choose_file2(self):
+        path = filedialog.askopenfilename(
+            title="Выберите текстовый файл 2",
+            filetypes=[("Text files", "*.txt *.csv *.log *.md"), ("All files", "*.*")]
+        )
+        if path:
+            self.file2_path = path
+            self.lbl2.config(text=f"Файл 2: {path}")
+            self.status.config(text="Выбран файл 2")
+
+    def _read_lines(self, path):
+        # читаем текст. Если кодировка другая — пробуем запасной вариант
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return f.readlines()
+        except UnicodeDecodeError:
+            with open(path, "r", encoding="cp1251") as f:
+                return f.readlines()
+
+    def compare_files(self):
+        try:
+            if not self.file1_path or not self.file2_path:
+                messagebox.showwarning("Не выбраны файлы", "Выберите оба файла для сравнения.")
+                return
+
+            lines1 = self._read_lines(self.file1_path)
+            lines2 = self._read_lines(self.file2_path)
+
+            diff = difflib.unified_diff(
+                lines1, lines2,
+                fromfile="file1",
+                tofile="file2",
+                lineterm=""
+            )
+
+            diff_text = "\n".join(diff)
+
+            self.text.delete("1.0", "end")
+            if diff_text.strip() == "":
+                self.text.insert("end", "Файлы одинаковые ✅")
+                self.status.config(text="Сравнение: отличий нет")
+            else:
+                self.text.insert("end", diff_text)
+                self.status.config(text="Сравнение: отличия найдены")
+
+        except FileNotFoundError:
+            messagebox.showerror("Ошибка", "Файл не найден. Возможно, он был перемещён или удалён.")
+        except PermissionError:
+            messagebox.showerror("Ошибка", "Нет прав на чтение файла.")
+        except Exception as e:
+            # общий ловец, чтобы программа не падала
+            messagebox.showerror("Неожиданная ошибка", f"Что-то пошло не так:\n{e}")
+
+    def clear_output(self):
+        self.text.delete("1.0", "end")
+        self.status.config(text="Очищено")
+
+    def show_about(self):
+        messagebox.showinfo(
+            "О программе",
+            "ЛР №3: Приложение с графическим интерфейсом\n"
+            "Тема: сравнение текстовых файлов\n"
+            "Python + Tkinter + difflib"
+        )
+
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = TextCompareApp(root)
+    root.mainloop()
